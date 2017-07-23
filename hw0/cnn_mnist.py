@@ -1,34 +1,43 @@
 import os
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
-tf.app.flags.DEFINE_bool("pre", False, "if true, preprocess mnist data")
+from tensorflow.contrib import learn
+
+tf.app.flags.DEFINE_bool("train", False, "if true, train model")
 flags = tf.app.flags.FLAGS
 
-def read_mnist(path = ".",
-        x_path = "train-images-idx3-ubyte",
-        y_path = "train-labels-idx1-ubyte"):
-    import struct
+# read training data from mnist dataset
+def read_train_data(file_name = "data"):
+    train_image_path = os.path.join(file_name, "train-images-idx3-ubyte")
+    train_label_path = os.path.join(file_name, "train-labels-idx1-ubyte")
+    with open(train_image_path, "rb") as f:
+        f.seek(16)
+        x = np.fromfile(f, np.uint8).reshape((60000, 28, 28))
 
-    x_path = os.path.join(path, x_path)
-    y_path = os.path.join(path, y_path)
+    with open(train_label_path, "rb") as f:
+        f.seek(8)
+        y = np.fromfile(f, np.uint8)
 
-    with open(y_path, "rb") as y_file:
-        magic, num = struct.unpack(">II", y_file.read(8))
-        lbl = np.fromfile(y_file, dtype=np.int8)
+    return x, y
 
-    with open(x_path, "rb") as x_file:
-        maginc, num, rows, cols = struct.unpack(">IIII", x_file.read(16))
-        img = np.fromfile(x_file, dtype=np.uint8).reshape(len(lbl), row, cols)
+# read testing data from test file
+def read_test_data(file_name = "data"):
+    test_image_path = os.path.join(file_name, "test-image")
 
-    get_img = lambda idx: (lbl[idx], img[idx])
+    with open(test_image_path, "rb") as f:
+        f.seek(16)
+        x_val = np.fromfile(f, np.uint8).reshape((10000, 28, 28))
 
-    for i in xrange(len(lbl)):
-        yield get_img(i)
+    return x_val
+
 
 def main(unused_argv):
-    if flags.pre == True:
-        mnist = read_mnist()
+    if flags.train:
+        x, y = read_train_data()
+        plt.imshow(x[0], cmap="gray_r")
+        plt.show()
 
 if __name__ == "__main__":
     tf.app.run()
