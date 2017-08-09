@@ -8,7 +8,7 @@ This repository is making for NTU professor Hung-yi Lee's course [Machine Learni
 
 All the code from hw0 - hw4 except final project.
 
-- [ ] [hw0](https://inclass.kaggle.com/c/hw0-mnist)
+- [ ] [hw0](https://inclass.kaggle.com/c/hw0-mnist) 0.98720
 
 - [ ] [hw1](https://inclass.kaggle.com/c/hw1-language-model)
 
