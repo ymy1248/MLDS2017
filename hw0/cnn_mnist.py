@@ -7,6 +7,7 @@ from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 
 tf.app.flags.DEFINE_bool("train", False, "if true, train model")
+tf.app.flags.DEFINE_bool("pred", False, "if true, predict test")
 flags = tf.app.flags.FLAGS
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -34,9 +35,10 @@ def read_test_data(file_name = "data"):
 
     with open(test_image_path, "rb") as f:
         f.seek(16)
-        x_val = np.fromfile(f, np.uint8).reshape((10000, 28, 28))
+        x_test = np.fromfile(f, np.uint8).reshape((10000, 28, 28))
 
-    return x_val
+    x_test = np.asarray(x_test, dtype=np.float32)
+    return x_test
 
 # show number image
 def show_image(image):
@@ -97,10 +99,11 @@ def cnn_model_fn(features, labels, mode):
                 optimizer="SGD")
 
     # Generate Predictions
-    predictions = {
-            "classes": tf.argmax(input=logits, axis=1),
-            "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-            }
+    predictions = tf.argmax(input=logits, axis=1)
+    # predictions = {
+    #         "classes": tf.argmax(input=logits, axis=1),
+    #         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+    #         }
 
     # Return a ModelFnOps object
     return model_fn_lib.ModelFnOps(
@@ -110,21 +113,45 @@ def cnn_model_fn(features, labels, mode):
 def main(unused_argv):
     if flags.train:
         x, y = read_train_data()
+        train_len = int(len(x)*0.9)
+        x_t = x[:train_len]
+        y_t = y[:train_len]
+        x_v = x[train_len:]
+        y_v = y[train_len:]
         mnist_classifier = learn.Estimator(
                 model_fn=cnn_model_fn,
                 model_dir="./model/mnist_cnn_model")
         
-        # tensors_to_log = {"probabilities": "softmax_tensor"}
-        # logging_hook = tf.train.LoggingTensorHook(
-        #         tensors=tensors_to_log,
-        #         every_n_iter=50)
+        tensors_to_log = {"probabilities": "softmax_tensor"}
+        logging_hook = tf.train.LoggingTensorHook(
+                tensors=tensors_to_log,
+                every_n_iter=50)
 
         mnist_classifier.fit(
-                x=x,
-                y=y,
+                x=x_t,
+                y=y_t,
                 batch_size=256,
-                steps=20000,)
-                #monitors=[logging_hook])
+                steps=100,)
+                # monitors=[logging_hook])
+        accuracy_score = mnist_classifier.evaluate(
+                x=x_v,
+                y=y_v,)
+        print(accuracy_score)
+
+    if flags.pred:
+        import csv
+        x_test = read_test_data()
+        ans = np.array(list(mnist_classifier.predict(
+                x=x_test,
+                as_iterable=True,)))
+        with open("ans.csv", "w") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            writer.writerow(["id", "label"])
+            for i in range(len(ans)):
+                writer.writerow([i, ans[i]])
+
+        
+        # print("accuracy of mnist_classifier: {0:f}".format(accuracy_score))
 
         #metrics = {
         #        "accuracy": learn.MetricSpec(
