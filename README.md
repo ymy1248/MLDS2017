@@ -1,6 +1,6 @@
 # MLDS2017
 
-![Progress](http://progressed.io/bar/3?title=progress)  
+![Progress](http://progressed.io/bar/10?title=progress)  
 
 This repository is making for NTU professor Hung-yi Lee's course [Machine Learning and having it deep and structured](http://speech.ee.ntu.edu.tw/~tlkagk/courses_MLDS17.html) which I missed this course in my last master semester. The reason why  I created this repositry is practicing and learning.
 
