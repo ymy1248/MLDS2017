@@ -74,12 +74,17 @@ def cnn_model_fn(features, labels, mode):
 
     # Dense Layer
     pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
-    dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
-    dropout = tf.layers.dropout(
-            inputs=dense, rate=0.4, training=mode == learn.ModeKeys.TRAIN)
+    dense1 = tf.layers.dense(inputs=pool2_flat, units=128, activation=tf.nn.relu)
+    dropout1 = tf.layers.dropout(
+            inputs=dense1,
+            rate=0.4,
+            training=mode == learn.ModeKeys.TRAIN)
+    dense2 = tf.layers.dense(inputs=dense1, units=256, activation=tf.nn.relu)
+    dropout2 = tf.layers.dropout(
+            inputs=dense2, rate=0.4, training=mode == learn.ModeKeys.TRAIN)
 
     # Logits Layer
-    logits = tf.layers.dense(inputs=dropout, units=10)
+    logits = tf.layers.dense(inputs=dropout2, units=10)
     
     loss = None
     train_op = None
@@ -96,7 +101,7 @@ def cnn_model_fn(features, labels, mode):
                 loss=loss,
                 global_step=tf.contrib.framework.get_global_step(),
                 learning_rate=0.001,
-                optimizer="SGD")
+                optimizer="Adam")
 
     # Generate Predictions
     predictions = tf.argmax(input=logits, axis=1)
