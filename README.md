@@ -1,6 +1,6 @@
 # MLDS2017
 
-![Progress](http://progressed.io/bar/10?title=progress)  
+![Progress](http://progressed.io/bar/20?title=progress)  
 
 This repository is making for NTU professor Hung-yi Lee's course [Machine Learning and having it deep and structured](http://speech.ee.ntu.edu.tw/~tlkagk/courses_MLDS17.html) which I missed this course in my last master semester. The reason why  I created this repositry is practicing and learning.
 
@@ -8,7 +8,7 @@ This repository is making for NTU professor Hung-yi Lee's course [Machine Learni
 
 All the code from hw0 - hw4 except final project.
 
-- [ ] [hw0](https://inclass.kaggle.com/c/hw0-mnist) 0.98720
+- [x] [hw0](https://inclass.kaggle.com/c/hw0-mnist) 0.99100
 
 - [ ] [hw1](https://inclass.kaggle.com/c/hw1-language-model)
 

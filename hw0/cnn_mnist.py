@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from tensorflow.contrib import learn
 from tensorflow.contrib.learn.python.learn.estimators import model_fn as model_fn_lib
 
+tf.logging.set_verbosity(tf.logging.WARN)
+
 tf.app.flags.DEFINE_bool("train", False, "if true, train model")
 tf.app.flags.DEFINE_bool("pred", False, "if true, predict test")
 flags = tf.app.flags.FLAGS
@@ -54,37 +56,53 @@ def cnn_model_fn(features, labels, mode):
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
             filters = 32,
-            kernel_size = [5,5],
-            padding = "same",
+            kernel_size = [3, 3],
+            padding = "valid",
             activation = tf.nn.relu)
 
+
     # Pooling Layer #1
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2,2], strides=2)
+    # pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2,2], strides=2)
 
     # Convolutional Layer #2
     conv2 = tf.layers.conv2d(
-            inputs = pool1,
+            inputs = conv1,
             filters = 64,
-            kernel_size = [5,5],
-            padding = "same",
+            kernel_size = [3, 3],
+            padding = "valid",
             activation = tf.nn.relu)
 
     # Pooling Layer #2
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
+    dropout_conv2 = tf.layers.dropout(
+        inputs=pool2,
+        rate=0.25,
+        training=mode == learn.ModeKeys.TRAIN)
+
     # Dense Layer
-    pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
+    pool2_flat = tf.reshape(pool2, [-1, 12 * 12 * 64])
+
     dense1 = tf.layers.dense(inputs=pool2_flat, units=128, activation=tf.nn.relu)
     dropout1 = tf.layers.dropout(
             inputs=dense1,
-            rate=0.4,
+            rate=0.5,
             training=mode == learn.ModeKeys.TRAIN)
-    dense2 = tf.layers.dense(inputs=dense1, units=256, activation=tf.nn.relu)
-    dropout2 = tf.layers.dropout(
-            inputs=dense2, rate=0.4, training=mode == learn.ModeKeys.TRAIN)
+
+    # dense2 = tf.layers.dense(inputs=dropout1, units=128, activation=tf.nn.relu)
+    # dropout2 = tf.layers.dropout(
+    #         inputs=dense2,
+    #         rate=0.1, 
+    #         training=mode == learn.ModeKeys.TRAIN)
+
+    # dense3 = tf.layers.dense(inputs=dropout2, units=256, activation=tf.nn.relu)
+    # dropout3 = tf.layers.dropout(
+    #         inputs=dense3,
+    #         rate=0.4, 
+    #         training=mode == learn.ModeKeys.TRAIN)
 
     # Logits Layer
-    logits = tf.layers.dense(inputs=dropout2, units=10)
+    logits = tf.layers.dense(inputs=dropout1, units=10)
     
     loss = None
     train_op = None
@@ -101,7 +119,7 @@ def cnn_model_fn(features, labels, mode):
                 loss=loss,
                 global_step=tf.contrib.framework.get_global_step(),
                 learning_rate=0.001,
-                optimizer="Adam")
+                optimizer="RMSProp")
 
     # Generate Predictions
     predictions = tf.argmax(input=logits, axis=1)
@@ -125,19 +143,36 @@ def main(unused_argv):
         y_v = y[train_len:]
         mnist_classifier = learn.Estimator(
                 model_fn=cnn_model_fn,
-                model_dir="./model/mnist_cnn_model")
+                model_dir="/tmp/cnn_mnist_model",
+                config=tf.contrib.learn.RunConfig(save_checkpoints_secs=1))
         
         tensors_to_log = {"probabilities": "softmax_tensor"}
         logging_hook = tf.train.LoggingTensorHook(
                 tensors=tensors_to_log,
                 every_n_iter=50)
 
+        validation_matrics = {
+            "accuracy":
+                tf.contrib.learn.MetricSpec(
+                    metric_fn=tf.contrib.metrics.streaming_accuracy,
+                    prediction_key=tf.contrib.learn.PredictionKey.CLASSES),
+        }
+
+        validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
+            x=x_v,
+            y=y_v,
+            every_n_steps=50,
+            early_stopping_metric="loss",
+            early_stopping_metric_minimize=True,
+            early_stopping_rounds=500)
+
         mnist_classifier.fit(
                 x=x_t,
                 y=y_t,
                 batch_size=256,
-                steps=100,)
-                # monitors=[logging_hook])
+                steps=10000,
+                monitors=[validation_monitor])
+
         accuracy_score = mnist_classifier.evaluate(
                 x=x_v,
                 y=y_v,)
@@ -146,8 +181,14 @@ def main(unused_argv):
     if flags.pred:
         import csv
         x_test = read_test_data()
+
+        mnist_classifier = learn.Estimator(
+                model_fn=cnn_model_fn,
+                model_dir="/tmp/cnn_mnist_model",)
+
         ans = np.array(list(mnist_classifier.predict(
                 x=x_test,
+                batch_size=64,
                 as_iterable=True,)))
         with open("ans.csv", "w") as f:
             writer = csv.writer(f, lineterminator="\n")
